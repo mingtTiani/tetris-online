@@ -2,14 +2,18 @@ import store from '../store';
 import todo from './todo';
 
 const keyboard = {
-  37: 'left',
-  38: 'rotate',
-  39: 'right',
-  40: 'down',
-  32: 'space',
-  83: 's',
-  82: 'r',
-  80: 'p',
+  37: 'left', // ←
+  65: 'left', // A
+  74: 'rotate', // J
+  38: 'rotate', // ↑
+  39: 'right', // →
+  68: 'right', // D
+  40: 'down', // ↓
+  83: 'down', // S
+  32: 'space', // 空格
+  77: 's', // M 开关音效
+  82: 'r', // R
+  80: 'p', // P
 };
 
 let keydownActive;

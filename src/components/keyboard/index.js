@@ -87,7 +87,7 @@ export default class Keyboard extends React.Component {
           size="s1"
           top={0}
           left={374}
-          label={i18n.rotation[lan]}
+          label={`${i18n.rotation[lan]}(J)`}
           arrow="translate(0, 63px)"
           position
           active={keyboard.get('rotate')}
@@ -146,7 +146,7 @@ export default class Keyboard extends React.Component {
           size="s2"
           top={0}
           left={106}
-          label={`${i18n.sound[lan]}(S)`}
+          label={`${i18n.sound[lan]}(M)`}
           active={keyboard.get('music')}
           ref={(c) => { this.dom_s = c; }}
         />
