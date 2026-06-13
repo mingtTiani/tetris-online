@@ -6,8 +6,10 @@ import App from './containers/';
 import './unit/const';
 import './control';
 import { subscribeRecord } from './unit';
+import network from './network';
 
 subscribeRecord(store); // 将更新的状态记录到localStorage
+network.init(store);
 
 render(
   <Provider store={store}>

@@ -45,14 +45,14 @@ body{
 
 
 .app{
-  width: 640px;
+  width: 960px;
   padding-top: 42px;
   box-shadow: 0 0 10px #fff inset;
   border-radius: 20px;
   position: absolute;
   top: 50%;
   left: 50%;
-  margin: -480px 0 0 -320px;
+  margin: -480px 0 0 -480px;
   background: #efcc19;
   :global{
     b {
@@ -87,8 +87,16 @@ body{
   }
 }
 
+.roomInfo{
+  text-align: center;
+  color: #000;
+  font-size: 18px;
+  line-height: 30px;
+  margin-bottom: 10px;
+}
+
 .rect{
-  width: 480px;
+  width: 860px;
   padding: 45px 0 35px;
   border: #000 solid;
   border-width: 0 10px 10px;
@@ -99,7 +107,7 @@ body{
 }
 
 .screen{
-  width: 390px;
+  width: 800px;
   height: 478px;
   border: solid 5px;
   border-color: #987f0f #fae36c #fae36c #987f0f;
@@ -108,10 +116,16 @@ body{
   .panel{
     width: 380px;
     height: 468px;
-    margin: 0 auto;
+    margin: 0;
     background: #9ead86;
     padding: 8px;
     border: 2px solid #494536;
+    display: inline-block;
+    vertical-align: top;
+    position: relative;
+    &:first-child{
+      border-right: 0;
+    }
   }
 }
 

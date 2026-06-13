@@ -14,11 +14,11 @@ import Pause from '../components/pause';
 import Point from '../components/point';
 import Logo from '../components/logo';
 import Keyboard from '../components/keyboard';
-import Guide from '../components/guide';
 
 import { transform, lastRecord, speeds, i18n, lan } from '../unit/const';
 import { visibilityChangeEvent, isFocus } from '../unit/';
 import states from '../control/states';
+import network from '../network';
 
 class App extends React.Component {
   constructor() {
@@ -59,66 +59,87 @@ class App extends React.Component {
       h: document.documentElement.clientHeight,
     });
   }
+  renderPanel(data, isRemote) {
+    const matrix = data.matrix || this.props.matrix;
+    const cur = isRemote ? data.cur : this.props.cur;
+    const reset = isRemote ? data.reset : this.props.reset;
+    const points = isRemote ? data.points : this.props.points;
+    const max = isRemote ? (data.max || 0) : this.props.max;
+    const clearLines = isRemote ? data.clearLines : this.props.clearLines;
+    const startLines = isRemote ? (data.startLines || 0) : this.props.startLines;
+    const speedRun = isRemote ? data.speedRun : this.props.speedRun;
+    const speedStart = isRemote ? (data.speedStart || 1) : this.props.speedStart;
+    const next = isRemote ? data.next : this.props.next;
+    const musicData = isRemote ? (data.music || false) : this.props.music;
+    const pauseData = isRemote ? data.pause : this.props.pause;
+
+    return (
+      <div className={style.panel}>
+        <Matrix
+          matrix={matrix}
+          cur={cur}
+          reset={reset}
+        />
+        <Logo cur={!!cur} reset={reset} />
+        <div className={style.state}>
+          <Point cur={!!cur} point={points} max={max} />
+          <p>{ cur ? i18n.cleans[lan] : i18n.startLine[lan] }</p>
+          <Number number={cur ? clearLines : startLines} />
+          <p>{i18n.level[lan]}</p>
+          <Number
+            number={cur ? speedRun : speedStart}
+            length={1}
+          />
+          <p>{i18n.next[lan]}</p>
+          <Next data={next} />
+          <div className={style.bottom}>
+            <Music data={musicData} />
+            <Pause data={pauseData} />
+            <Number time />
+          </div>
+        </div>
+      </div>
+    );
+  }
   render() {
     let filling = 0;
     const size = (() => {
       const w = this.state.w;
       const h = this.state.h;
-      const ratio = h / w;
-      let scale;
-      let css = {};
-      if (ratio < 1.5) {
-        scale = h / 960;
-      } else {
-        scale = w / 640;
-        filling = (h - (960 * scale)) / scale / 3;
-        css = {
-          paddingTop: Math.floor(filling) + 42,
-          paddingBottom: Math.floor(filling),
-          marginTop: Math.floor(-480 - (filling * 1.5)),
-        };
-      }
+      const refW = 960;
+      const refH = 960;
+      const scale = Math.min(w / refW, h / refH);
+      filling = (h - (refH * scale)) / scale / 3;
+      const css = {
+        paddingTop: Math.floor(filling) + 42,
+        paddingBottom: Math.floor(filling),
+        marginTop: Math.floor(-(refH / 2) - (filling * 1.5)),
+      };
       css[transform] = `scale(${scale})`;
       return css;
     })();
+
+    const remote = this.props.remote || {};
+    const connectedCount = remote.connectedCount || 1;
 
     return (
       <div
         className={style.app}
         style={size}
       >
+        <div className={style.roomInfo}>
+          <span>房间: {network.getRoomId()}&nbsp;
+            {connectedCount >= 2 ? '(已连接)' : '(等待对手)'}
+          </span>
+        </div>
         <div className={classnames({ [style.rect]: true, [style.drop]: this.props.drop })}>
           <Decorate />
           <div className={style.screen}>
-            <div className={style.panel}>
-              <Matrix
-                matrix={this.props.matrix}
-                cur={this.props.cur}
-                reset={this.props.reset}
-              />
-              <Logo cur={!!this.props.cur} reset={this.props.reset} />
-              <div className={style.state}>
-                <Point cur={!!this.props.cur} point={this.props.points} max={this.props.max} />
-                <p>{ this.props.cur ? i18n.cleans[lan] : i18n.startLine[lan] }</p>
-                <Number number={this.props.cur ? this.props.clearLines : this.props.startLines} />
-                <p>{i18n.level[lan]}</p>
-                <Number
-                  number={this.props.cur ? this.props.speedRun : this.props.speedStart}
-                  length={1}
-                />
-                <p>{i18n.next[lan]}</p>
-                <Next data={this.props.next} />
-                <div className={style.bottom}>
-                  <Music data={this.props.music} />
-                  <Pause data={this.props.pause} />
-                  <Number time />
-                </div>
-              </div>
-            </div>
+            {this.renderPanel({}, false)}
+            {this.renderPanel(remote, true)}
           </div>
         </div>
         <Keyboard filling={filling} keyboard={this.props.keyboard} />
-        <Guide />
       </div>
     );
   }
@@ -140,6 +161,7 @@ App.propTypes = {
   reset: propTypes.bool.isRequired,
   drop: propTypes.bool.isRequired,
   keyboard: propTypes.object.isRequired,
+  remote: propTypes.object,
 };
 
 const mapStateToProps = (state) => ({
@@ -157,6 +179,7 @@ const mapStateToProps = (state) => ({
   reset: state.get('reset'),
   drop: state.get('drop'),
   keyboard: state.get('keyboard'),
+  remote: state.get('remote'),
 });
 
 export default connect(mapStateToProps)(App);

@@ -1,0 +1,148 @@
+import actions from '../actions';
+
+const WS_URL = process.env.WS_URL || `ws://${window.location.hostname}:3000`;
+
+let ws = null;
+let reconnectTimer = null;
+let storeRef = null;
+let roomId = null;
+let syncScheduled = false;
+
+function getRoomId() {
+  const match = window.location.search.match(/[?&]room=([^&]+)/);
+  if (match) {
+    return decodeURIComponent(match[1]);
+  }
+  const id = Math.random().toString(36).substr(2, 6).toUpperCase();
+  const url = new URL(window.location.href);
+  url.searchParams.set('room', id);
+  window.history.replaceState({}, '', url.toString());
+  return id;
+}
+
+function send(message) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(message));
+  }
+}
+
+function sendSync(state) {
+  const remote = state.get('remote');
+  const connectedCount = remote && remote.connectedCount;
+  if (connectedCount < 2) {
+    return; // 没有对手时不发送
+  }
+
+  const cur = state.get('cur');
+  send({
+    type: 'SYNC',
+    state: {
+      matrix: state.get('matrix').toJS(),
+      cur: cur ? {
+        type: cur.type,
+        rotateIndex: cur.rotateIndex,
+        shape: cur.shape.toJS(),
+        xy: cur.xy.toJS ? cur.xy.toJS() : cur.xy,
+        timeStamp: cur.timeStamp,
+      } : null,
+      next: state.get('next'),
+      points: state.get('points'),
+      clearLines: state.get('clearLines'),
+      speedRun: state.get('speedRun'),
+      reset: state.get('reset'),
+      pause: state.get('pause'),
+    },
+  });
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer) {
+    return;
+  }
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    // eslint-disable-next-line no-use-before-define
+    connect();
+  }, 3000);
+}
+
+function scheduleSync() {
+  if (syncScheduled) {
+    return;
+  }
+  syncScheduled = true;
+  setTimeout(() => {
+    syncScheduled = false;
+    if (!storeRef) {
+      return;
+    }
+    const state = storeRef.getState();
+    sendSync(state);
+  }, 50);
+}
+
+function connect() {
+  if (ws) {
+    return;
+  }
+
+  try {
+    ws = new WebSocket(WS_URL);
+  } catch (e) {
+    scheduleReconnect();
+    return;
+  }
+
+  ws.onopen = () => {
+    send({ type: 'JOIN', roomId });
+  };
+
+  ws.onmessage = (event) => {
+    let message;
+    try {
+      message = JSON.parse(event.data);
+    } catch (e) {
+      return;
+    }
+
+    if (message.type === 'SYNC' && message.state && storeRef) {
+      storeRef.dispatch(actions.remoteSync(message.state));
+    }
+
+    if (message.type === 'ROOM_STATE' && storeRef) {
+      const previousCount = (storeRef.getState().get('remote') || {}).connectedCount || 0;
+      storeRef.dispatch(actions.remoteSync(
+        Object.assign({}, storeRef.getState().get('remote') || {}, {
+          connectedCount: message.count,
+        })
+      ));
+      if (previousCount < 2 && message.count >= 2) {
+        sendSync(storeRef.getState());
+      }
+    }
+  };
+
+  ws.onclose = () => {
+    ws = null;
+    scheduleReconnect();
+  };
+
+  ws.onerror = () => {
+    scheduleReconnect();
+  };
+}
+
+function init(store) {
+  storeRef = store;
+  roomId = getRoomId();
+  connect();
+  store.subscribe(() => {
+    scheduleSync();
+  });
+}
+
+export default {
+  init,
+  sendSync,
+  getRoomId: () => roomId,
+};

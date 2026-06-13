@@ -4,7 +4,7 @@ import classnames from 'classnames';
 import propTypes from 'prop-types';
 
 import style from './index.less';
-import { isClear } from '../../unit/';
+import { isClear, getGhost } from '../../unit/';
 import { fillLine, blankLine } from '../../unit/const';
 import states from '../../control/states';
 
@@ -88,6 +88,22 @@ export default class Matrix extends React.Component {
           }
         })
       ));
+
+      // 叠加落地阴影
+      const ghost = getGhost(cur, props.matrix);
+      if (ghost) {
+        ghost.shape.forEach((m, k1) => (
+          m.forEach((n, k2) => {
+            if (n && ghost.xy[0] + k1 >= 0) {
+              let line = matrix.get(ghost.xy[0] + k1);
+              if (line.get(ghost.xy[1] + k2) === 0) { // 不与当前块/已锁定块重叠
+                line = line.set(ghost.xy[1] + k2, 3);
+                matrix = matrix.set(ghost.xy[0] + k1, line);
+              }
+            }
+          })
+        ));
+      }
     }
     return matrix;
   }
@@ -156,6 +172,7 @@ export default class Matrix extends React.Component {
                 className={classnames({
                   c: e === 1,
                   d: e === 2,
+                  g: e === 3,
                 })}
                 key={k2}
               />)

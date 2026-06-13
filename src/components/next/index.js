@@ -38,6 +38,10 @@ export default class Next extends React.Component {
   build(type) {
     const shape = blockShape[type];
     const block = empty.map(e => ([...e]));
+    if (!shape) {
+      this.setState({ block });
+      return;
+    }
     shape.forEach((m, k1) => {
       m.forEach((n, k2) => {
         if (n) {

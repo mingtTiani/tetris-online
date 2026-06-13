@@ -108,6 +108,13 @@ function focus(data) {
   };
 }
 
+function remoteSync(data) {
+  return {
+    type: reducerType.REMOTE_SYNC,
+    data,
+  };
+}
+
 export default {
   nextBlock,
   moveBlock,
@@ -125,4 +132,5 @@ export default {
   keyboard,
   music,
   focus,
+  remoteSync,
 };

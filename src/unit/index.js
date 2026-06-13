@@ -100,4 +100,15 @@ const unit = {
   isFocus,
 };
 
+unit.getGhost = function getGhost(cur, matrix) { // 计算当前方块落地阴影位置
+  if (!cur) {
+    return null;
+  }
+  let index = 0;
+  while (unit.want(cur.fall(index + 1), matrix)) {
+    index++;
+  }
+  return cur.fall(index);
+};
+
 module.exports = unit;
