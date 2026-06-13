@@ -15,9 +15,10 @@ import Point from '../components/point';
 import Logo from '../components/logo';
 import Keyboard from '../components/keyboard';
 
-import { transform, lastRecord, speeds, i18n, lan } from '../unit/const';
+import { transform, i18n, lan } from '../unit/const';
 import { visibilityChangeEvent, isFocus } from '../unit/';
 import states from '../control/states';
+import actions from '../actions';
 import network from '../network';
 
 class App extends React.Component {
@@ -26,6 +27,7 @@ class App extends React.Component {
     this.state = {
       w: document.documentElement.clientWidth,
       h: document.documentElement.clientHeight,
+      overtimeFlash: false,
     };
   }
   componentWillMount() {
@@ -38,19 +40,23 @@ class App extends React.Component {
       }, false);
     }
 
-    if (lastRecord) { // 读取记录
-      if (lastRecord.cur && !lastRecord.pause) { // 拿到上一次游戏的状态, 如果在游戏中且没有暂停, 游戏继续
-        const speedRun = this.props.speedRun;
-        let timeout = speeds[speedRun - 1] / 2; // 继续时, 给予当前下落速度一半的停留时间
-        // 停留时间不小于最快速的速度
-        timeout = speedRun < speeds[speeds.length - 1] ? speeds[speeds.length - 1] : speedRun;
-        states.auto(timeout);
-      }
-      if (!lastRecord.cur) {
-        states.overStart();
-      }
-    } else {
-      states.overStart();
+    // 刷新后统一重置到菜单，避免读到上一局的死亡/加时/结果等状态
+    states.resetToMenu();
+  }
+  componentWillReceiveProps(nextProps) {
+    const prevRemoteDead = this.props.remote
+      && this.props.remote.deadInfo
+      && this.props.remote.deadInfo.isDead;
+    const nextRemoteDead = nextProps.remote
+      && nextProps.remote.deadInfo
+      && nextProps.remote.deadInfo.isDead;
+    const prevLocalDead = this.props.playerDead && this.props.playerDead.isDead;
+
+    if (!prevLocalDead && !prevRemoteDead && nextRemoteDead) {
+      this.setState({ overtimeFlash: true });
+      setTimeout(() => {
+        this.setState({ overtimeFlash: false });
+      }, 2000);
     }
   }
   resize() {
@@ -58,6 +64,98 @@ class App extends React.Component {
       w: document.documentElement.clientWidth,
       h: document.documentElement.clientHeight,
     });
+  }
+  selectStartLevel(level) {
+    this.props.dispatch(actions.speedStart(level));
+  }
+  renderStartLevelSelector() {
+    const current = this.props.speedStart;
+    const levels = [1, 3, 5];
+    return (
+      <div className={style.startLevelSelector}>
+        <span>初始速度:</span>
+        {levels.map(level => (
+          <button
+            key={level}
+            className={classnames({ [style.active]: current === level })}
+            onClick={() => this.selectStartLevel(level)}
+          >
+            L{level}
+          </button>
+        ))}
+      </div>
+    );
+  }
+  renderScoreboard() {
+    const remote = this.props.remote || {};
+    const connectedCount = remote.connectedCount || 1;
+    if (connectedCount < 2) {
+      return null;
+    }
+    const localDead = this.props.playerDead.isDead;
+    const remoteDead = remote.deadInfo && remote.deadInfo.isDead;
+    const gameTime = this.props.gameTime;
+
+    let statusText = '对战中';
+    if (localDead && remoteDead) {
+      statusText = '已结束';
+    } else if (localDead) {
+      statusText = '你已到顶，等待对方';
+    } else if (remoteDead) {
+      statusText = '对方已到顶，加时赛';
+    }
+
+    return (
+      <div className={style.scoreboard}>
+        <div className={style.scoreItem}>
+          <span className={style.scoreLabel}>我方</span>
+          <span className={style.scoreValue}>{this.props.points}</span>
+          <span className={style.levelBadge}>L{this.props.speedRun}</span>
+        </div>
+        <div className={style.scoreCenter}>
+          <div className={style.scoreTime}>
+            {Math.floor(gameTime / 60)}:{String(gameTime % 60).padStart(2, '0')}
+          </div>
+          <div className={style.scoreStatus}>{statusText}</div>
+        </div>
+        <div className={style.scoreItem}>
+          <span className={style.scoreLabel}>对方</span>
+          <span className={style.scoreValue}>{remote.points || 0}</span>
+          <span className={style.levelBadge}>L{remote.speedRun || 1}</span>
+        </div>
+      </div>
+    );
+  }
+  renderResultOverlay() {
+    const result = this.props.gameResult;
+    if (!result || !result.finished) {
+      return null;
+    }
+    const winnerText = result.winner === 'local' ? '你赢了' : '对方赢了';
+    const reasonText = result.reason === 'points' ? '分数更高' : '存活更久';
+    return (
+      <div className={style.resultOverlay}>
+        <div className={style.resultBox}>
+          <div className={style.resultTitle}>{winnerText}</div>
+          <div className={style.resultReason}>{reasonText}</div>
+          <div className={style.resultScores}>
+            <div>我方 {result.localPoints} 分（{result.localTime}s）</div>
+            <div>对方 {result.remotePoints} 分（{result.remoteTime}s）</div>
+          </div>
+          <p className={style.resultHint}>按 R 开始新游戏</p>
+        </div>
+      </div>
+    );
+  }
+  renderOvertimeFlash() {
+    if (!this.state.overtimeFlash) {
+      return null;
+    }
+    return (
+      <div className={style.overtimeFlash}>
+        <div className={style.overtimeFlashText}>对方已到顶，进入加时追分！</div>
+      </div>
+    );
   }
   renderPanel(data, isRemote) {
     const matrix = data.matrix || this.props.matrix;
@@ -104,22 +202,31 @@ class App extends React.Component {
       </div>
     );
   }
-  renderBattleOverlay(isRemote, data) {
+  renderBattleOverlay(isRemote, data) { // eslint-disable-line no-unused-vars
     const remote = this.props.remote || {};
     const connectedCount = remote.connectedCount || 1;
     if (connectedCount < 2) {
       return null;
     }
-    const localReset = this.props.reset;
-    const remoteReset = data.reset;
+    const localDead = this.props.playerDead.isDead;
+    const remoteDead = remote.deadInfo && remote.deadInfo.isDead;
+    const result = this.props.gameResult;
 
-    if (!isRemote && localReset) {
-      return <div className={style.overlay}>你输了</div>;
+    if (result && result.finished) {
+      if (!isRemote) {
+        return (
+          <div className={style.overlay}>
+            {result.winner === 'local' ? '胜利' : '失败'}
+          </div>
+        );
+      }
+      return null;
     }
-    if (!isRemote && !localReset && remoteReset) {
-      return <div className={style.overlay}>你赢了</div>;
+
+    if (!isRemote && localDead && !remoteDead) {
+      return <div className={style.overlay}>已到顶，等待对方结束</div>;
     }
-    if (isRemote && remoteReset) {
+    if (isRemote && remoteDead) {
       return <div className={style.overlay}>对方已失败</div>;
     }
     return null;
@@ -134,7 +241,7 @@ class App extends React.Component {
       const scale = Math.min(w / refW, h / refH);
       filling = (h - (refH * scale)) / scale / 3;
       const css = {
-        paddingTop: Math.floor(filling) + 42,
+        paddingTop: Math.floor(filling) + 20,
         paddingBottom: Math.floor(filling),
         marginTop: Math.floor(-(refH / 2) - (filling * 1.5)),
       };
@@ -146,6 +253,7 @@ class App extends React.Component {
     const connectedCount = remote.connectedCount || 1;
     const connectionStatus = remote.connectionStatus || 'disconnected';
     const isWaiting = connectedCount < 2;
+    const inGame = !!this.props.cur;
 
     const statusText = (() => {
       if (connectionStatus === 'connecting') {
@@ -154,7 +262,7 @@ class App extends React.Component {
       if (connectionStatus === 'error' || connectionStatus === 'disconnected') {
         return '未连接服务器（请先运行 npm run server）';
       }
-      return isWaiting ? '等待对手' : '对战已开始';
+      return isWaiting ? '等待对手' : '双方已连接，按 R 开始对战';
     })();
 
     return (
@@ -163,13 +271,16 @@ class App extends React.Component {
         style={size}
       >
         <div className={style.roomInfo}>
-          <span>房间: {network.getRoomId()} </span>
-          <span className={isWaiting ? style.waiting : style.connected}>
-            {statusText}
-          </span>
+          <div className={style.roomHeader}>
+            <span>房间: {network.getRoomId()} </span>
+            <span className={isWaiting ? style.waiting : style.connected}>
+              {statusText}
+            </span>
+          </div>
+          {!inGame && this.renderStartLevelSelector()}
           {isWaiting && connectionStatus === 'connected' && (
             <p className={style.roomTip}>
-              把地址栏链接发给好友，进入同一房间即可开始对战；先堆到顶的一方判负
+              把地址栏链接发给好友，进入同一房间即可开始对战；死亡后由分数与存活时间决胜负
             </p>
           )}
           {(connectionStatus === 'error' || connectionStatus === 'disconnected') && (
@@ -178,9 +289,11 @@ class App extends React.Component {
             </p>
           )}
         </div>
+        {this.renderOvertimeFlash()}
         <div className={classnames({ [style.rect]: true, [style.drop]: this.props.drop })}>
           <Decorate />
           <div className={style.screen}>
+            {this.renderScoreboard()}
             {this.renderPanel({}, false)}
             {isWaiting ? (
               <div className={style.waitingPanel}>
@@ -191,6 +304,7 @@ class App extends React.Component {
             ) : this.renderPanel(remote, true)}
           </div>
         </div>
+        {this.renderResultOverlay()}
         <Keyboard filling={filling} keyboard={this.props.keyboard} />
       </div>
     );
@@ -214,6 +328,9 @@ App.propTypes = {
   drop: propTypes.bool.isRequired,
   keyboard: propTypes.object.isRequired,
   remote: propTypes.object,
+  gameTime: propTypes.number.isRequired,
+  playerDead: propTypes.object.isRequired,
+  gameResult: propTypes.object.isRequired,
 };
 
 const mapStateToProps = (state) => ({
@@ -232,6 +349,9 @@ const mapStateToProps = (state) => ({
   drop: state.get('drop'),
   keyboard: state.get('keyboard'),
   remote: state.get('remote'),
+  gameTime: state.get('gameTime'),
+  playerDead: state.get('playerDead'),
+  gameResult: state.get('gameResult'),
 });
 
 export default connect(mapStateToProps)(App);
