@@ -1,4 +1,5 @@
 import actions from '../actions';
+import states from '../control/states';
 
 const WS_URL = process.env.WS_URL || `ws://${window.location.hostname}:3000`;
 
@@ -7,6 +8,8 @@ let reconnectTimer = null;
 let storeRef = null;
 let roomId = null;
 let syncScheduled = false;
+let lastRemoteSyncAt = 0;
+let battleAutoStarted = false;
 
 function getRoomId() {
   const match = window.location.search.match(/[?&]room=([^&]+)/);
@@ -26,11 +29,26 @@ function send(message) {
   }
 }
 
+function setConnectionStatus(status) {
+  if (!storeRef) {
+    return;
+  }
+  const remote = storeRef.getState().get('remote') || {};
+  storeRef.dispatch(actions.remoteSync(
+    Object.assign({}, remote, { connectionStatus: status })
+  ));
+}
+
 function sendSync(state) {
   const remote = state.get('remote');
   const connectedCount = remote && remote.connectedCount;
   if (connectedCount < 2) {
     return; // 没有对手时不发送
+  }
+
+  // 刚刚接收到对手状态时，避免立刻把本地状态回传，防止两边状态互相覆盖趋同
+  if (Date.now() - lastRemoteSyncAt < 150) {
+    return;
   }
 
   const cur = state.get('cur');
@@ -94,7 +112,17 @@ function connect() {
   }
 
   ws.onopen = () => {
+    // eslint-disable-next-line no-console
+    console.log('[Tetris WS] connected, joining room', roomId);
+    setConnectionStatus('connected');
     send({ type: 'JOIN', roomId });
+    const state = storeRef && storeRef.getState();
+    const remote = state && state.get('remote');
+    if (remote && remote.connectedCount >= 2) {
+      // eslint-disable-next-line no-console
+      console.log('[Tetris WS] reconnected with opponent, resyncing');
+      sendSync(state);
+    }
   };
 
   ws.onmessage = (event) => {
@@ -106,10 +134,21 @@ function connect() {
     }
 
     if (message.type === 'SYNC' && message.state && storeRef) {
+      lastRemoteSyncAt = Date.now();
+      // eslint-disable-next-line no-console
+      console.log('[Tetris WS] received SYNC', {
+        roomId,
+        points: message.state.points,
+        clearLines: message.state.clearLines,
+        reset: message.state.reset,
+        hasCur: !!message.state.cur,
+      });
       storeRef.dispatch(actions.remoteSync(message.state));
     }
 
     if (message.type === 'ROOM_STATE' && storeRef) {
+      // eslint-disable-next-line no-console
+      console.log('[Tetris WS] received ROOM_STATE count=', message.count);
       const previousCount = (storeRef.getState().get('remote') || {}).connectedCount || 0;
       storeRef.dispatch(actions.remoteSync(
         Object.assign({}, storeRef.getState().get('remote') || {}, {
@@ -117,17 +156,30 @@ function connect() {
         })
       ));
       if (previousCount < 2 && message.count >= 2) {
+        // eslint-disable-next-line no-console
+        console.log('[Tetris WS] opponent joined, starting battle');
+        const state = storeRef.getState();
+        if (!battleAutoStarted && !state.get('cur')) {
+          battleAutoStarted = true;
+          states.start();
+        }
         sendSync(storeRef.getState());
       }
     }
   };
 
   ws.onclose = () => {
+    // eslint-disable-next-line no-console
+    console.log('[Tetris WS] closed, will reconnect');
     ws = null;
+    setConnectionStatus('disconnected');
     scheduleReconnect();
   };
 
-  ws.onerror = () => {
+  ws.onerror = (err) => {
+    // eslint-disable-next-line no-console
+    console.log('[Tetris WS] error', err);
+    setConnectionStatus('error');
     scheduleReconnect();
   };
 }
@@ -135,6 +187,7 @@ function connect() {
 function init(store) {
   storeRef = store;
   roomId = getRoomId();
+  setConnectionStatus('connecting');
   connect();
   store.subscribe(() => {
     scheduleSync();

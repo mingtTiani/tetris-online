@@ -23,6 +23,15 @@ export default class Matrix extends React.Component {
   componentWillReceiveProps(nextProps = {}) {
     const clears = isClear(nextProps.matrix);
     const overs = nextProps.reset;
+    // 远程面板只展示对方状态，不播本地动画，也不触发本地状态变更
+    if (nextProps.isRemote) {
+      this.setState({
+        clearLines: false,
+        isOver: false,
+        overState: null,
+      });
+      return;
+    }
     this.setState({
       clearLines: clears,
       isOver: overs,
@@ -188,4 +197,5 @@ Matrix.propTypes = {
   matrix: propTypes.object.isRequired,
   cur: propTypes.object,
   reset: propTypes.bool.isRequired,
+  isRemote: propTypes.bool,
 };

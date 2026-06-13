@@ -26,17 +26,20 @@ export default class Number extends React.Component {
       time_count: false,
       time: new Date(),
     };
+    this.timeInterval = null;
   }
   componentWillMount() {
     if (!this.props.time) {
       return;
     }
     const clock = () => {
-      const count = +Number.timeInterval;
-      Number.timeInterval = setTimeout(() => {
+      this.timeInterval = setTimeout(() => {
+        if (!this.timeInterval) {
+          return;
+        }
         this.setState({
           time: new Date(),
-          time_count: count, // 用来做 shouldComponentUpdate 优化
+          time_count: this.timeInterval, // 用来做 shouldComponentUpdate 优化
         });
         clock();
       }, 1000);
@@ -45,21 +48,15 @@ export default class Number extends React.Component {
   }
   shouldComponentUpdate({ number }) {
     if (this.props.time) { // 右下角时钟
-      if (this.state.time_count !== Number.time_count) {
-        if (this.state.time_count !== false) {
-          Number.time_count = this.state.time_count; // 记录clock上一次的缓存
-        }
-        return true;
-      }
-      return false; // 经过判断这次的时间已经渲染, 返回false
+      return this.state.time_count !== this.timeInterval;
     }
     return this.props.number !== number;
   }
   componentWillUnmount() {
-    if (!this.props.time) {
-      return;
+    if (this.timeInterval) {
+      clearTimeout(this.timeInterval);
+      this.timeInterval = null;
     }
-    clearTimeout(Number.timeInterval);
   }
   render() {
     if (this.props.time) { // 右下角时钟
@@ -78,11 +75,6 @@ export default class Number extends React.Component {
     return (render(num));
   }
 }
-
-Number.statics = {
-  timeInterval: null,
-  time_count: null,
-};
 
 Number.propTypes = {
   number: propTypes.number,

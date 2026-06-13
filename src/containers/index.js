@@ -75,10 +75,13 @@ class App extends React.Component {
 
     return (
       <div className={style.panel}>
+        <div className={style.panelLabel}>{isRemote ? '对方' : '我方'}</div>
+        {this.renderBattleOverlay(isRemote, data)}
         <Matrix
           matrix={matrix}
           cur={cur}
           reset={reset}
+          isRemote={isRemote}
         />
         <Logo cur={!!cur} reset={reset} />
         <div className={style.state}>
@@ -101,12 +104,32 @@ class App extends React.Component {
       </div>
     );
   }
+  renderBattleOverlay(isRemote, data) {
+    const remote = this.props.remote || {};
+    const connectedCount = remote.connectedCount || 1;
+    if (connectedCount < 2) {
+      return null;
+    }
+    const localReset = this.props.reset;
+    const remoteReset = data.reset;
+
+    if (!isRemote && localReset) {
+      return <div className={style.overlay}>你输了</div>;
+    }
+    if (!isRemote && !localReset && remoteReset) {
+      return <div className={style.overlay}>你赢了</div>;
+    }
+    if (isRemote && remoteReset) {
+      return <div className={style.overlay}>对方已失败</div>;
+    }
+    return null;
+  }
   render() {
     let filling = 0;
     const size = (() => {
       const w = this.state.w;
       const h = this.state.h;
-      const refW = 960;
+      const refW = 1100;
       const refH = 960;
       const scale = Math.min(w / refW, h / refH);
       filling = (h - (refH * scale)) / scale / 3;
@@ -121,6 +144,18 @@ class App extends React.Component {
 
     const remote = this.props.remote || {};
     const connectedCount = remote.connectedCount || 1;
+    const connectionStatus = remote.connectionStatus || 'disconnected';
+    const isWaiting = connectedCount < 2;
+
+    const statusText = (() => {
+      if (connectionStatus === 'connecting') {
+        return '正在连接对战服务器…';
+      }
+      if (connectionStatus === 'error' || connectionStatus === 'disconnected') {
+        return '未连接服务器（请先运行 npm run server）';
+      }
+      return isWaiting ? '等待对手' : '对战已开始';
+    })();
 
     return (
       <div
@@ -128,15 +163,32 @@ class App extends React.Component {
         style={size}
       >
         <div className={style.roomInfo}>
-          <span>房间: {network.getRoomId()}&nbsp;
-            {connectedCount >= 2 ? '(已连接)' : '(等待对手)'}
+          <span>房间: {network.getRoomId()} </span>
+          <span className={isWaiting ? style.waiting : style.connected}>
+            {statusText}
           </span>
+          {isWaiting && connectionStatus === 'connected' && (
+            <p className={style.roomTip}>
+              把地址栏链接发给好友，进入同一房间即可开始对战；先堆到顶的一方判负
+            </p>
+          )}
+          {(connectionStatus === 'error' || connectionStatus === 'disconnected') && (
+            <p className={style.roomTip}>
+              请确认已执行 npm run server，并检查防火墙是否放行 WebSocket 端口
+            </p>
+          )}
         </div>
         <div className={classnames({ [style.rect]: true, [style.drop]: this.props.drop })}>
           <Decorate />
           <div className={style.screen}>
             {this.renderPanel({}, false)}
-            {this.renderPanel(remote, true)}
+            {isWaiting ? (
+              <div className={style.waitingPanel}>
+                <div className={style.waitingTitle}>等待对手加入…</div>
+                <div className={style.roomUrl}>{window.location.href}</div>
+                <p className={style.waitingHint}>复制上方链接到另一个浏览器或设备打开</p>
+              </div>
+            ) : this.renderPanel(remote, true)}
           </div>
         </div>
         <Keyboard filling={filling} keyboard={this.props.keyboard} />

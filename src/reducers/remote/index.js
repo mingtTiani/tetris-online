@@ -12,6 +12,8 @@ const defaultState = {
   speedRun: 1,
   reset: false,
   pause: false,
+  connectedCount: 1,
+  connectionStatus: 'disconnected',
 };
 
 function reviveBlock(cur) {
@@ -37,20 +39,44 @@ function reviveMatrix(matrix) {
 
 const remote = (state = defaultState, action) => {
   switch (action.type) {
-    case reducerType.REMOTE_SYNC:
+    case reducerType.REMOTE_SYNC: {
       if (!action.data) {
         return state;
       }
-      return {
-        matrix: reviveMatrix(action.data.matrix),
-        cur: reviveBlock(action.data.cur),
-        next: action.data.next || '',
-        points: action.data.points || 0,
-        clearLines: action.data.clearLines || 0,
-        speedRun: action.data.speedRun || 1,
-        reset: !!action.data.reset,
-        pause: !!action.data.pause,
-      };
+      // 只更新 action.data 里显式带来的字段，避免一次 SYNC/状态更新把其它字段冲掉
+      const nextState = Object.assign({}, state);
+      if (action.data.matrix !== undefined) {
+        nextState.matrix = reviveMatrix(action.data.matrix);
+      }
+      if (action.data.cur !== undefined) {
+        nextState.cur = reviveBlock(action.data.cur);
+      }
+      if (action.data.next !== undefined) {
+        nextState.next = action.data.next || '';
+      }
+      if (action.data.points !== undefined) {
+        nextState.points = action.data.points || 0;
+      }
+      if (action.data.clearLines !== undefined) {
+        nextState.clearLines = action.data.clearLines || 0;
+      }
+      if (action.data.speedRun !== undefined) {
+        nextState.speedRun = action.data.speedRun || 1;
+      }
+      if (action.data.reset !== undefined) {
+        nextState.reset = !!action.data.reset;
+      }
+      if (action.data.pause !== undefined) {
+        nextState.pause = !!action.data.pause;
+      }
+      if (action.data.connectedCount !== undefined) {
+        nextState.connectedCount = action.data.connectedCount;
+      }
+      if (action.data.connectionStatus !== undefined) {
+        nextState.connectionStatus = action.data.connectionStatus;
+      }
+      return nextState;
+    }
     default:
       return state;
   }
