@@ -163,6 +163,17 @@ npm run build
 
 ---
 
+## 联系与反馈
+
+如果你有任何建议、想法，或者发现了 Bug，欢迎联系我：
+
+- 📧 邮箱：**mingtinai@outlook.com**
+- 💬 微信扫码：
+
+![微信二维码](img/微信二维码.png)
+
+---
+
 ## License
 
 遵循原项目 [Apache-2.0](https://github.com/chvin/react-tetris/blob/master/LICENSE) 协议。

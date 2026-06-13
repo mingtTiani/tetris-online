@@ -1,7 +1,7 @@
 {
-  "name": "react-tetris",
+  "name": "tetris-online",
   "version": "1.0.1",
-  "description": "使用React、Redux、Immutable编写「俄罗斯方块」。Use Tetact, Redux, Immutable to coding \"Tetris\".",
+  "description": "基于 chvin/react-tetris 二次开发的俄罗斯方块在线对战版。React + Redux + Immutable + WebSocket。",
   "scripts": {
     "start": "webpack-dev-server --progress",
     "server": "node server/websocket.js",
@@ -9,21 +9,23 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/chvin/react-tetris.git"
+    "url": "git+https://gitee.com/mingtiank/tetris-online.git"
   },
   "keywords": [
     "Tetris",
     "React",
     "Redux",
     "Immutable",
-    "俄罗斯方块"
+    "WebSocket",
+    "俄罗斯方块",
+    "在线对战"
   ],
-  "author": "Chvin",
+  "author": "mingtiank",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/chvin/react-tetris/issues"
+    "url": "https://gitee.com/mingtiank/tetris-online/issues"
   },
-  "homepage": "https://github.com/chvin/react-tetris#readme",
+  "homepage": "https://gitee.com/mingtiank/tetris-online#readme",
   "devDependencies": {
     "autoprefixer": "^6.7.2",
     "babel-core": "^6.13.2",
