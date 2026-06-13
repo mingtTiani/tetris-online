@@ -9,7 +9,6 @@ let storeRef = null;
 let roomId = null;
 let syncScheduled = false;
 let lastRemoteSyncAt = 0;
-let battleAutoStarted = false;
 
 function getRoomId() {
   const match = window.location.search.match(/[?&]room=([^&]+)/);
@@ -52,6 +51,7 @@ function sendSync(state) {
   }
 
   const cur = state.get('cur');
+  const playerDead = state.get('playerDead');
   send({
     type: 'SYNC',
     state: {
@@ -67,8 +67,16 @@ function sendSync(state) {
       points: state.get('points'),
       clearLines: state.get('clearLines'),
       speedRun: state.get('speedRun'),
+      speedStart: state.get('speedStart'),
       reset: state.get('reset'),
       pause: state.get('pause'),
+      gameTime: state.get('gameTime'),
+      deadInfo: {
+        isDead: playerDead.isDead,
+        deadAt: playerDead.deadAt,
+      },
+      overtime: state.get('overtime'),
+      gameResult: state.get('gameResult'),
     },
   });
 }
@@ -97,6 +105,15 @@ function scheduleSync() {
     const state = storeRef.getState();
     sendSync(state);
   }, 50);
+}
+
+function sendRestart(speedStart) {
+  const remote = storeRef && storeRef.getState().get('remote');
+  const connectedCount = remote && remote.connectedCount;
+  if (connectedCount < 2) {
+    return;
+  }
+  send({ type: 'RESTART', speedStart });
 }
 
 function connect() {
@@ -146,6 +163,16 @@ function connect() {
       storeRef.dispatch(actions.remoteSync(message.state));
     }
 
+    if (message.type === 'RESTART' && storeRef) {
+      // eslint-disable-next-line no-console
+      console.log('[Tetris WS] received RESTART', message.speedStart);
+      const state = storeRef.getState();
+      if (!state.get('cur') || state.get('gameResult').finished) {
+        storeRef.dispatch(actions.speedStart(message.speedStart || 1));
+        states.start();
+      }
+    }
+
     if (message.type === 'ROOM_STATE' && storeRef) {
       // eslint-disable-next-line no-console
       console.log('[Tetris WS] received ROOM_STATE count=', message.count);
@@ -157,12 +184,7 @@ function connect() {
       ));
       if (previousCount < 2 && message.count >= 2) {
         // eslint-disable-next-line no-console
-        console.log('[Tetris WS] opponent joined, starting battle');
-        const state = storeRef.getState();
-        if (!battleAutoStarted && !state.get('cur')) {
-          battleAutoStarted = true;
-          states.start();
-        }
+        console.log('[Tetris WS] opponent joined, waiting for start');
         sendSync(storeRef.getState());
       }
     }
@@ -197,5 +219,6 @@ function init(store) {
 export default {
   init,
   sendSync,
+  sendRestart,
   getRoomId: () => roomId,
 };

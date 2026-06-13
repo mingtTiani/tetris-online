@@ -69,6 +69,14 @@ wss.on('connection', (ws) => {
         type: 'SYNC',
         state: message.state,
       });
+      return;
+    }
+
+    if (message.type === 'RESTART' && currentRoom) {
+      broadcast(currentRoom, ws, {
+        type: 'RESTART',
+        speedStart: message.speedStart,
+      });
     }
   });
 

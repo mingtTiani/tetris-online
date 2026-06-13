@@ -43,9 +43,14 @@ const origin = {
 
 const blockType = Object.keys(blockShape);
 
-const speeds = [800, 650, 500, 370, 250, 160];
+const speeds = [800, 700, 600, 500, 420, 350, 290, 230, 180, 140, 110, 85, 65, 50];
 
-const delays = [50, 60, 70, 80, 90, 100];
+const delays = [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115];
+
+const maxSpeedLevel = 14; // 最高速度等级
+
+// 从 currentLevel 升到 currentLevel + 1 需要消除多少行
+const getLevelThreshold = (currentLevel) => 15 + ((currentLevel - 1) * 5);
 
 const fillLine = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
@@ -91,8 +96,6 @@ const transform = (function () {
   return trans.filter((e) => body.style[e] !== undefined)[0];
 }());
 
-const eachLines = 20; // 每消除eachLines行, 增加速度
-
 const getParam = (param) => { // 获取浏览器参数
   const r = new RegExp(`\\?(?:.+&)?${param}=(.*?)(?:&.*)?$`);
   const m = window.location.toString().match(r);
@@ -120,7 +123,8 @@ module.exports = {
   StorageKey,
   lastRecord,
   maxPoint,
-  eachLines,
+  maxSpeedLevel,
+  getLevelThreshold,
   transform,
   lan,
   i18n: i18n.data,

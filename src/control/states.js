@@ -2,9 +2,11 @@ import { List } from 'immutable';
 import store from '../store';
 import { want, isClear, isOver } from '../unit/';
 import actions from '../actions';
-import { speeds, blankLine, blankMatrix, clearPoints, eachLines } from '../unit/const';
+import {
+  speeds, blankLine, blankMatrix, clearPoints,
+  maxSpeedLevel, getLevelThreshold,
+} from '../unit/const';
 import { music } from '../unit/music';
-
 
 const getStartMatrix = (startLines) => { // 生成startLines
   const getLine = (min, max) => { // 返回标亮个数在min~max之间一行方块, (包含边界)
@@ -37,9 +39,61 @@ const getStartMatrix = (startLines) => { // 生成startLines
   return startMatrix;
 };
 
+const defaultGameResult = {
+  finished: false,
+  winner: null,
+  reason: null,
+  localPoints: 0,
+  remotePoints: 0,
+  localTime: 0,
+  remoteTime: 0,
+};
+
 const states = {
   // 自动下落setTimeout变量
   fallInterval: null,
+
+  // 游戏全局计时器
+  gameTimer: null,
+
+  // 结果判定轮询计时器
+  resolutionTimer: null,
+
+  // 计算当前速度等级：基于开局等级、累计消除行数、游戏时间、加时状态
+  computeSpeedRun: (clearLines, speedStart, gameTime, overtime) => {
+    let level = speedStart;
+    let accumulated = 0;
+    while (level < maxSpeedLevel) {
+      const need = getLevelThreshold(level);
+      if (accumulated + need <= clearLines) {
+        accumulated += need;
+        level += 1;
+      } else {
+        break;
+      }
+    }
+    const timeAdd = Math.floor(gameTime / 60);
+    level += timeAdd;
+    if (overtime && overtime.active) {
+      const overtimeAdd = 2 + Math.floor((gameTime - overtime.startAt) / 20);
+      level += overtimeAdd;
+    }
+    return level > maxSpeedLevel ? maxSpeedLevel : level;
+  },
+
+  // 应用时间/行数/加时导致的等级变化
+  refreshSpeedRun: () => {
+    const state = store.getState();
+    const newSpeed = states.computeSpeedRun(
+      state.get('clearLines'),
+      state.get('speedStart'),
+      state.get('gameTime'),
+      state.get('overtime')
+    );
+    if (newSpeed !== state.get('speedRun')) {
+      store.dispatch(actions.speedRun(newSpeed));
+    }
+  },
 
   // 游戏开始
   start: () => {
@@ -48,13 +102,48 @@ const states = {
     }
     const state = store.getState();
     states.dispatchPoints(0);
-    store.dispatch(actions.speedRun(state.get('speedStart')));
+    store.dispatch(actions.gameTime(0));
+    store.dispatch(actions.playerDead({ isDead: false, deadAt: null }));
+    store.dispatch(actions.overtime({ active: false, startAt: null, lastBumpAt: null }));
+    store.dispatch(actions.gameResult(defaultGameResult));
+    store.dispatch(actions.reset(false));
+    store.dispatch(actions.lock(false));
+    const speedStart = state.get('speedStart');
+    store.dispatch(actions.speedRun(speedStart));
     const startLines = state.get('startLines');
     const startMatrix = getStartMatrix(startLines);
     store.dispatch(actions.matrix(startMatrix));
     store.dispatch(actions.moveBlock({ type: state.get('next') }));
     store.dispatch(actions.nextBlock());
+    states.startTimers();
     states.auto();
+  },
+
+  // 启动全局计时器和结果轮询
+  startTimers: () => {
+    clearInterval(states.gameTimer);
+    clearInterval(states.resolutionTimer);
+    states.gameTimer = setInterval(() => {
+      const state = store.getState();
+      const playerDead = state.get('playerDead');
+      const gameResult = state.get('gameResult');
+      if (state.get('pause') || playerDead.isDead || gameResult.finished) {
+        return;
+      }
+      const gameTime = state.get('gameTime') + 1;
+      store.dispatch(actions.gameTime(gameTime));
+      states.refreshSpeedRun();
+    }, 1000);
+    states.resolutionTimer = setInterval(() => {
+      states.checkRemoteDeath();
+      states.tryResolveResult();
+    }, 500);
+  },
+
+  // 停止计时器
+  stopTimers: () => {
+    clearInterval(states.gameTimer);
+    clearInterval(states.resolutionTimer);
   },
 
   // 自动下落
@@ -114,7 +203,7 @@ const states = {
       if (music.gameover) {
         music.gameover();
       }
-      states.overStart();
+      states.handleLocalDeath();
       return;
     }
     setTimeout(() => {
@@ -168,16 +257,111 @@ const states = {
       clearPoints[lines.length - 1]; // 一次消除的行越多, 加分越多
     states.dispatchPoints(addPoints);
 
-    const speedAdd = Math.floor(clearLines / eachLines); // 消除行数, 增加对应速度
-    let speedNow = state.get('speedStart') + speedAdd;
-    speedNow = speedNow > 6 ? 6 : speedNow;
-    store.dispatch(actions.speedRun(speedNow));
+    states.refreshSpeedRun();
   },
 
-  // 游戏结束, 触发动画
+  // 本地玩家死亡
+  handleLocalDeath: () => {
+    clearTimeout(states.fallInterval);
+    clearInterval(states.gameTimer);
+    const state = store.getState();
+    const gameTime = state.get('gameTime');
+    store.dispatch(actions.playerDead({ isDead: true, deadAt: gameTime }));
+    store.dispatch(actions.lock(true));
+    states.tryResolveResult();
+  },
+
+  // 检测到对方死亡时，本方为幸存者则进入加时
+  checkRemoteDeath: () => {
+    const state = store.getState();
+    const localDead = state.get('playerDead').isDead;
+    const remote = state.get('remote') || {};
+    const remoteDead = remote.deadInfo && remote.deadInfo.isDead;
+    const overtime = state.get('overtime') || {};
+
+    if (remoteDead && !localDead && !overtime.active) {
+      states.startOvertime();
+    }
+  },
+
+  // 开始加时赛
+  startOvertime: () => {
+    const state = store.getState();
+    const gameTime = state.get('gameTime');
+    store.dispatch(actions.overtime({
+      active: true,
+      startAt: gameTime,
+      lastBumpAt: gameTime,
+    }));
+    states.refreshSpeedRun();
+  },
+
+  // 尝试判定最终结果
+  tryResolveResult: () => {
+    const state = store.getState();
+    const result = state.get('gameResult');
+    if (result && result.finished) {
+      return;
+    }
+    const localDead = state.get('playerDead');
+    const remote = state.get('remote') || {};
+    const remoteDead = remote.deadInfo || {};
+
+    if (!localDead.isDead || !remoteDead.isDead) {
+      return; // 双方都死亡后才判定
+    }
+
+    const local = {
+      points: state.get('points'),
+      deadAt: localDead.deadAt || 0,
+    };
+    const remoteInfo = {
+      points: remote.points || 0,
+      deadAt: remoteDead.deadAt || 0,
+    };
+
+    let winner;
+    let reason;
+    if (local.points > remoteInfo.points) {
+      winner = 'local';
+      reason = 'points';
+    } else if (remoteInfo.points > local.points) {
+      winner = 'remote';
+      reason = 'points';
+    } else {
+      winner = local.deadAt >= remoteInfo.deadAt ? 'local' : 'remote';
+      reason = 'time';
+    }
+
+    store.dispatch(actions.gameResult({
+      finished: true,
+      winner,
+      reason,
+      localPoints: local.points,
+      remotePoints: remoteInfo.points,
+      localTime: local.deadAt,
+      remoteTime: remoteDead.deadAt,
+    }));
+    states.stopTimers();
+  },
+
+  // 游戏结束, 触发动画（保留用于手动重置/初始化）
   overStart: () => {
     clearTimeout(states.fallInterval);
+    states.stopTimers();
     store.dispatch(actions.lock(true));
+    store.dispatch(actions.reset(true));
+    store.dispatch(actions.pause(false));
+  },
+
+  // 重置到开始菜单（初始化用，不计为死亡）
+  resetToMenu: () => {
+    clearTimeout(states.fallInterval);
+    states.stopTimers();
+    store.dispatch(actions.gameTime(0));
+    store.dispatch(actions.playerDead({ isDead: false, deadAt: null }));
+    store.dispatch(actions.overtime({ active: false, startAt: null, lastBumpAt: null }));
+    store.dispatch(actions.gameResult(defaultGameResult));
     store.dispatch(actions.reset(true));
     store.dispatch(actions.pause(false));
   },

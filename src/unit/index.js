@@ -75,16 +75,23 @@ const unit = {
   },
   subscribeRecord(store) { // 将状态记录到 localStorage
     store.subscribe(() => {
-      let data = store.getState().toJS();
-      if (data.lock) { // 当状态为锁定, 不记录
+      const state = store.getState().toJS();
+      if (state.lock) { // 当状态为锁定, 不记录
         return;
       }
-      data = JSON.stringify(data);
-      data = encodeURIComponent(data);
+      // 不保存会过期的对战元状态，避免刷新后读到上一局的死亡/结果状态
+      const data = Object.assign({}, state);
+      delete data.gameTime;
+      delete data.playerDead;
+      delete data.overtime;
+      delete data.gameResult;
+      delete data.remote;
+      let record = JSON.stringify(data);
+      record = encodeURIComponent(record);
       if (window.btoa) {
-        data = btoa(data);
+        record = btoa(record);
       }
-      localStorage.setItem(StorageKey, data);
+      localStorage.setItem(StorageKey, record);
     });
   },
   isMobile() { // 判断是否为移动端

@@ -115,6 +115,34 @@ function remoteSync(data) {
   };
 }
 
+function gameTime(data) {
+  return {
+    type: reducerType.GAME_TIME,
+    data,
+  };
+}
+
+function playerDead(data) {
+  return {
+    type: reducerType.PLAYER_DEAD,
+    data,
+  };
+}
+
+function overtime(data) {
+  return {
+    type: reducerType.OVERTIME,
+    data,
+  };
+}
+
+function gameResult(data) {
+  return {
+    type: reducerType.GAME_RESULT,
+    data,
+  };
+}
+
 export default {
   nextBlock,
   moveBlock,
@@ -133,4 +161,8 @@ export default {
   music,
   focus,
   remoteSync,
+  gameTime,
+  playerDead,
+  overtime,
+  gameResult,
 };

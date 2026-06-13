@@ -10,10 +10,30 @@ const defaultState = {
   points: 0,
   clearLines: 0,
   speedRun: 1,
+  speedStart: 1,
   reset: false,
   pause: false,
   connectedCount: 1,
   connectionStatus: 'disconnected',
+  gameTime: 0,
+  deadInfo: {
+    isDead: false,
+    deadAt: null,
+  },
+  overtime: {
+    active: false,
+    startAt: null,
+    lastBumpAt: null,
+  },
+  gameResult: {
+    finished: false,
+    winner: null,
+    reason: null,
+    localPoints: 0,
+    remotePoints: 0,
+    localTime: 0,
+    remoteTime: 0,
+  },
 };
 
 function reviveBlock(cur) {
@@ -63,6 +83,9 @@ const remote = (state = defaultState, action) => {
       if (action.data.speedRun !== undefined) {
         nextState.speedRun = action.data.speedRun || 1;
       }
+      if (action.data.speedStart !== undefined) {
+        nextState.speedStart = action.data.speedStart || 1;
+      }
       if (action.data.reset !== undefined) {
         nextState.reset = !!action.data.reset;
       }
@@ -74,6 +97,22 @@ const remote = (state = defaultState, action) => {
       }
       if (action.data.connectionStatus !== undefined) {
         nextState.connectionStatus = action.data.connectionStatus;
+      }
+      if (action.data.gameTime !== undefined) {
+        nextState.gameTime = action.data.gameTime || 0;
+      }
+      if (action.data.deadInfo !== undefined) {
+        nextState.deadInfo = action.data.deadInfo || { isDead: false, deadAt: null };
+      }
+      if (action.data.overtime !== undefined) {
+        nextState.overtime = action.data.overtime || {
+          active: false,
+          startAt: null,
+          lastBumpAt: null,
+        };
+      }
+      if (action.data.gameResult !== undefined) {
+        nextState.gameResult = action.data.gameResult || defaultState.gameResult;
       }
       return nextState;
     }

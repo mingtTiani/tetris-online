@@ -16,7 +16,10 @@ import drop from './drop';
 import keyboard from './keyboard';
 import focus from './focus';
 import remote from './remote';
-
+import gameTime from './gameTime';
+import playerDead from './playerDead';
+import overtime from './overtime';
+import gameResult from './gameResult';
 
 const rootReducer = combineReducers({
   pause,
@@ -36,6 +39,10 @@ const rootReducer = combineReducers({
   keyboard,
   focus,
   remote,
+  gameTime,
+  playerDead,
+  overtime,
+  gameResult,
 });
 
 export default rootReducer;

@@ -22,3 +22,7 @@ export const KEY_MUSIC = 'KEY_MUSIC';
 export const KEY_PAUSE = 'KEY_PAUSE';
 export const FOCUS = 'FOCUS';
 export const REMOTE_SYNC = 'REMOTE_SYNC';
+export const GAME_TIME = 'GAME_TIME';
+export const PLAYER_DEAD = 'PLAYER_DEAD';
+export const OVERTIME = 'OVERTIME';
+export const GAME_RESULT = 'GAME_RESULT';
