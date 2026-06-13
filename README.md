@@ -18,8 +18,10 @@
 
 ## 在线体验
 
-- Gitee Pages：待部署
+- 🌐 GitHub Pages：**https://mingtTiani.github.io/tetris-online**
 - 本地运行：`npm start`，然后访问 `http://127.0.0.1:8080`
+
+> 注意：双人对战需要额外运行 `npm run server` 启动 WebSocket 服务器。
 
 ---
 
