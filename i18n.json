@@ -121,6 +121,120 @@
       "en": "Drop",
       "fr": "Tomber",
       "fa": "سقوط"
+    },
+    "settingsTitle": {
+      "cn": "设置",
+      "en": "Settings",
+      "fr": "Paramètres",
+      "fa": "Settings"
+    },
+    "gameMode": {
+      "cn": "游戏模式",
+      "en": "Game Mode",
+      "fr": "Mode de Jeu",
+      "fa": "Game Mode"
+    },
+    "singlePlayer": {
+      "cn": "单人模式",
+      "en": "Single Player",
+      "fr": "Solo",
+      "fa": "Single Player"
+    },
+    "dualPlayer": {
+      "cn": "双人模式",
+      "en": "Dual Player",
+      "fr": "Multijoueur",
+      "fa": "Dual Player"
+    },
+    "keyConfig": {
+      "cn": "按键绑定",
+      "en": "Key Bindings",
+      "fr": "Touches",
+      "fa": "Key Bindings"
+    },
+    "keyHint": {
+      "cn": "点击按键后按新键，Esc 取消",
+      "en": "Click a key then press a new key, Esc to cancel",
+      "fr": "Cliquez puis appuyez sur une touche, Échap pour annuler",
+      "fa": "Click a key then press a new key, Esc to cancel"
+    },
+    "gameSettings": {
+      "cn": "游戏参数",
+      "en": "Game Settings",
+      "fr": "Paramètres de Jeu",
+      "fa": "Game Settings"
+    },
+    "startSpeed": {
+      "cn": "初始速度",
+      "en": "Start Speed",
+      "fr": "Vitesse de Départ",
+      "fa": "Start Speed"
+    },
+    "showGhost": {
+      "cn": "显示阴影",
+      "en": "Show Ghost",
+      "fr": "Afficher l'Ombre",
+      "fa": "Show Ghost"
+    },
+    "audioSettings": {
+      "cn": "音频",
+      "en": "Audio",
+      "fr": "Audio",
+      "fa": "Audio"
+    },
+    "volume": {
+      "cn": "音量",
+      "en": "Volume",
+      "fr": "Volume",
+      "fa": "Volume"
+    },
+    "networkSettings": {
+      "cn": "网络",
+      "en": "Network",
+      "fr": "Réseau",
+      "fa": "Network"
+    },
+    "wsUrl": {
+      "cn": "服务器地址",
+      "en": "Server URL",
+      "fr": "Adresse du Serveur",
+      "fa": "Server URL"
+    },
+    "language": {
+      "cn": "语言",
+      "en": "Language",
+      "fr": "Langue",
+      "fa": "Language"
+    },
+    "followSystem": {
+      "cn": "跟随系统",
+      "en": "Follow System",
+      "fr": "Suivre le Système",
+      "fa": "Follow System"
+    },
+    "on": {
+      "cn": "开",
+      "en": "On",
+      "fr": "Oui",
+      "fa": "On"
+    },
+    "off": {
+      "cn": "关",
+      "en": "Off",
+      "fr": "Non",
+      "fa": "Off"
+    },
+    "resetSettings": {
+      "cn": "恢复默认",
+      "en": "Reset Defaults",
+      "fr": "Réinitialiser",
+      "fa": "Reset Defaults"
+    },
+    "close": {
+      "cn": "关闭",
+      "en": "Close",
+      "fr": "Fermer",
+      "fa": "Close"
     }
   }
 }

@@ -143,6 +143,19 @@ function gameResult(data) {
   };
 }
 
+function settings(data) {
+  return {
+    type: reducerType.SETTINGS,
+    data,
+  };
+}
+
+function resetSettings() {
+  return {
+    type: reducerType.RESET_SETTINGS,
+  };
+}
+
 export default {
   nextBlock,
   moveBlock,
@@ -165,4 +178,6 @@ export default {
   playerDead,
   overtime,
   gameResult,
+  settings,
+  resetSettings,
 };

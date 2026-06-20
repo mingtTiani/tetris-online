@@ -9,25 +9,56 @@ import todo from '../../control/todo';
 import { i18n, lan } from '../../unit/const';
 
 export default class Keyboard extends React.Component {
+  constructor() {
+    super();
+    this.touchEventCatch = {};
+    this.mouseDownEventCatch = {};
+    this.handlers = {};
+    Object.keys(todo).forEach((key) => {
+      this.handlers[key] = {
+        onMouseDown: () => {
+          if (this.touchEventCatch[key]) {
+            return;
+          }
+          todo[key].down(store);
+          this.mouseDownEventCatch[key] = true;
+        },
+        onMouseUp: () => {
+          if (this.touchEventCatch[key]) {
+            this.touchEventCatch[key] = false;
+            return;
+          }
+          todo[key].up(store);
+          this.mouseDownEventCatch[key] = false;
+        },
+        onMouseOut: () => {
+          if (this.mouseDownEventCatch[key]) {
+            todo[key].up(store);
+          }
+        },
+        onTouchStart: () => {
+          this.touchEventCatch[key] = true;
+          todo[key].down(store);
+        },
+        onTouchEnd: () => {
+          todo[key].up(store);
+        },
+      };
+    });
+  }
   componentDidMount() {
-    const touchEventCatch = {}; // 对于手机操作, 触发了touchstart, 将作出记录, 不再触发后面的mouse事件
-
-    // 在鼠标触发mousedown时, 移除元素时可以不触发mouseup, 这里做一个兼容, 以mouseout模拟mouseup
-    const mouseDownEventCatch = {};
     document.addEventListener('touchstart', (e) => {
       if (e.preventDefault) {
         e.preventDefault();
       }
     }, true);
 
-    // 解决issue: https://github.com/chvin/react-tetris/issues/24
     document.addEventListener('touchend', (e) => {
       if (e.preventDefault) {
         e.preventDefault();
       }
     }, true);
 
-    // 阻止双指放大
     document.addEventListener('gesturestart', (e) => {
       if (e.preventDefault) {
         event.preventDefault();
@@ -39,42 +70,15 @@ export default class Keyboard extends React.Component {
         e.preventDefault();
       }
     }, true);
-
-    Object.keys(todo).forEach((key) => {
-      this[`dom_${key}`].dom.addEventListener('mousedown', () => {
-        if (touchEventCatch[key] === true) {
-          return;
-        }
-        todo[key].down(store);
-        mouseDownEventCatch[key] = true;
-      }, true);
-      this[`dom_${key}`].dom.addEventListener('mouseup', () => {
-        if (touchEventCatch[key] === true) {
-          touchEventCatch[key] = false;
-          return;
-        }
-        todo[key].up(store);
-        mouseDownEventCatch[key] = false;
-      }, true);
-      this[`dom_${key}`].dom.addEventListener('mouseout', () => {
-        if (mouseDownEventCatch[key] === true) {
-          todo[key].up(store);
-        }
-      }, true);
-      this[`dom_${key}`].dom.addEventListener('touchstart', () => {
-        touchEventCatch[key] = true;
-        todo[key].down(store);
-      }, true);
-      this[`dom_${key}`].dom.addEventListener('touchend', () => {
-        todo[key].up(store);
-      }, true);
-    });
   }
-  shouldComponentUpdate({ keyboard, filling }) {
-    return !Immutable.is(keyboard, this.props.keyboard) || filling !== this.props.filling;
+  shouldComponentUpdate({ keyboard, filling, keyLabels }) {
+    return !Immutable.is(keyboard, this.props.keyboard) ||
+      filling !== this.props.filling ||
+      JSON.stringify(keyLabels) !== JSON.stringify(this.props.keyLabels);
   }
   render() {
     const keyboard = this.props.keyboard;
+    const labels = this.props.keyLabels || {};
     return (
       <div
         className={style.keyboard}
@@ -87,11 +91,11 @@ export default class Keyboard extends React.Component {
           size="s1"
           top={0}
           left={374}
-          label={`${i18n.rotation[lan]}(J)`}
+          label={`${i18n.rotation[lan]}(${labels.rotate || 'J'})`}
           arrow="translate(0, 63px)"
           position
           active={keyboard.get('rotate')}
-          ref={(c) => { this.dom_rotate = c; }}
+          {...this.handlers.rotate}
         />
         <Button
           color="blue"
@@ -101,63 +105,63 @@ export default class Keyboard extends React.Component {
           label={i18n.down[lan]}
           arrow="translate(0,-71px) rotate(180deg)"
           active={keyboard.get('down')}
-          ref={(c) => { this.dom_down = c; }}
+          {...this.handlers.down}
         />
         <Button
           color="blue"
           size="s1"
           top={90}
           left={284}
-          label={i18n.left[lan]}
+          label={`${i18n.left[lan]}(${labels.left || 'A'})`}
           arrow="translate(60px, -12px) rotate(270deg)"
           active={keyboard.get('left')}
-          ref={(c) => { this.dom_left = c; }}
+          {...this.handlers.left}
         />
         <Button
           color="blue"
           size="s1"
           top={90}
           left={464}
-          label={i18n.right[lan]}
+          label={`${i18n.right[lan]}(${labels.right || 'D'})`}
           arrow="translate(-60px, -12px) rotate(90deg)"
           active={keyboard.get('right')}
-          ref={(c) => { this.dom_right = c; }}
+          {...this.handlers.right}
         />
         <Button
           color="blue"
           size="s0"
           top={100}
           left={52}
-          label={`${i18n.drop[lan]} (SPACE)`}
+          label={`${i18n.drop[lan]} (${labels.space || 'SPACE'})`}
           active={keyboard.get('drop')}
-          ref={(c) => { this.dom_space = c; }}
+          {...this.handlers.space}
         />
         <Button
           color="red"
           size="s2"
           top={0}
           left={196}
-          label={`${i18n.reset[lan]}(R)`}
+          label={`${i18n.reset[lan]}(${labels.reset || 'R'})`}
           active={keyboard.get('reset')}
-          ref={(c) => { this.dom_r = c; }}
+          {...this.handlers.r}
         />
         <Button
           color="green"
           size="s2"
           top={0}
           left={106}
-          label={`${i18n.sound[lan]}(M)`}
+          label={`${i18n.sound[lan]}(${labels.music || 'M'})`}
           active={keyboard.get('music')}
-          ref={(c) => { this.dom_s = c; }}
+          {...this.handlers.s}
         />
         <Button
           color="green"
           size="s2"
           top={0}
           left={16}
-          label={`${i18n.pause[lan]}(P)`}
+          label={`${i18n.pause[lan]}(${labels.pause || 'P'})`}
           active={keyboard.get('pause')}
-          ref={(c) => { this.dom_p = c; }}
+          {...this.handlers.p}
         />
       </div>
     );
@@ -167,4 +171,5 @@ export default class Keyboard extends React.Component {
 Keyboard.propTypes = {
   filling: propTypes.number.isRequired,
   keyboard: propTypes.object.isRequired,
+  keyLabels: propTypes.object,
 };

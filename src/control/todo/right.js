@@ -2,7 +2,7 @@ import { want } from '../../unit/';
 import event from '../../unit/event';
 import actions from '../../actions';
 import states from '../states';
-import { speeds, delays } from '../../unit/const';
+import { speeds, delays, maxSpeedLevel } from '../../unit/const';
 import { music } from '../../unit/music';
 
 const down = (store) => {
@@ -41,7 +41,7 @@ const down = (store) => {
         states.auto(remain);
       } else {
         let speed = state.get('speedStart');
-        speed = speed + 1 > 6 ? 1 : speed + 1;
+        speed = speed + 1 > maxSpeedLevel ? 1 : speed + 1;
         store.dispatch(actions.speedStart(speed));
       }
     },

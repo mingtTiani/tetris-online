@@ -1,6 +1,6 @@
 {
   "name": "tetris-online",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "基于 chvin/react-tetris 二次开发的俄罗斯方块在线对战版。React + Redux + Immutable + WebSocket。",
   "scripts": {
     "start": "webpack-dev-server --progress",

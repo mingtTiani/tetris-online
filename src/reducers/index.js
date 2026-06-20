@@ -20,6 +20,7 @@ import gameTime from './gameTime';
 import playerDead from './playerDead';
 import overtime from './overtime';
 import gameResult from './gameResult';
+import settings from './settings';
 
 const rootReducer = combineReducers({
   pause,
@@ -43,6 +44,7 @@ const rootReducer = combineReducers({
   playerDead,
   overtime,
   gameResult,
+  settings,
 });
 
 export default rootReducer;

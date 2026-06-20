@@ -206,6 +206,22 @@ function connect() {
   };
 }
 
+function disconnect() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  if (ws) {
+    try {
+      ws.close();
+    } catch (e) {
+      // ignore
+    }
+    ws = null;
+  }
+  setConnectionStatus('disconnected');
+}
+
 function init(store) {
   storeRef = store;
   roomId = getRoomId();
@@ -220,5 +236,6 @@ export default {
   init,
   sendSync,
   sendRestart,
+  disconnect,
   getRoomId: () => roomId,
 };

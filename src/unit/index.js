@@ -34,22 +34,24 @@ const unit = {
     const xy = next.xy;
     const shape = next.shape;
     const horizontal = shape.get(0).size;
+    const row = typeof xy.get === 'function' ? xy.get(0) : xy[0];
+    const col = typeof xy.get === 'function' ? xy.get(1) : xy[1];
     return shape.every((m, k1) => (
       m.every((n, k2) => {
-        if (xy[1] < 0) { // left
+        if (col < 0) { // left
           return false;
         }
-        if (xy[1] + horizontal > 10) { // right
+        if (col + horizontal > 10) { // right
           return false;
         }
-        if (xy[0] + k1 < 0) { // top
+        if (row + k1 < 0) { // top
           return true;
         }
-        if (xy[0] + k1 >= 20) { // bottom
+        if (row + k1 >= 20) { // bottom
           return false;
         }
         if (n) {
-          if (matrix.get(xy[0] + k1).get(xy[1] + k2)) {
+          if (matrix.get(row + k1).get(col + k2)) {
             return false;
           }
           return true;

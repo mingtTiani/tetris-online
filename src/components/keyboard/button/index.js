@@ -12,11 +12,17 @@ export default class Button extends React.Component {
   render() {
     const {
       active, color, size, top, left, label, position, arrow,
+      onMouseDown, onMouseUp, onMouseOut, onTouchStart, onTouchEnd,
     } = this.props;
     return (
       <div
         className={cn({ [style.button]: true, [style[color]]: true, [style[size]]: true })}
         style={{ top, left }}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
+        onMouseOut={onMouseOut}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
         <i
           className={cn({ [style.active]: active })}
@@ -42,5 +48,10 @@ Button.propTypes = {
   position: propTypes.bool,
   arrow: propTypes.string,
   active: propTypes.bool.isRequired,
+  onMouseDown: propTypes.func,
+  onMouseUp: propTypes.func,
+  onMouseOut: propTypes.func,
+  onTouchStart: propTypes.func,
+  onTouchEnd: propTypes.func,
 };
 

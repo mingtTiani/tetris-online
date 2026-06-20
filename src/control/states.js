@@ -1,6 +1,7 @@
 import { List } from 'immutable';
 import store from '../store';
-import { want, isClear, isOver } from '../unit/';
+import { want, isClear } from '../unit/';
+import Block from '../unit/block';
 import actions from '../actions';
 import {
   speeds, blankLine, blankMatrix, clearPoints,
@@ -199,16 +200,21 @@ const states = {
       }
       return;
     }
-    if (isOver(matrix)) {
+
+    // 先检测下一个方块是否能放入出生位置，被堵死才算结束
+    const nextType = store.getState().get('next');
+    const nextBlock = new Block({ type: nextType });
+    if (!want(nextBlock, matrix)) {
       if (music.gameover) {
         music.gameover();
       }
       states.handleLocalDeath();
       return;
     }
+
     setTimeout(() => {
       store.dispatch(actions.lock(false));
-      store.dispatch(actions.moveBlock({ type: store.getState().get('next') }));
+      store.dispatch(actions.moveBlock({ type: nextType }));
       store.dispatch(actions.nextBlock());
       states.auto();
     }, 100);
@@ -246,7 +252,19 @@ const states = {
       newMatrix = newMatrix.unshift(List(blankLine));
     });
     store.dispatch(actions.matrix(newMatrix));
-    store.dispatch(actions.moveBlock({ type: state.get('next') }));
+
+    // 检测下一个方块是否能放入出生位置，被堵死才算结束
+    const nextType = state.get('next');
+    const nextBlock = new Block({ type: nextType });
+    if (!want(nextBlock, newMatrix)) {
+      if (music.gameover) {
+        music.gameover();
+      }
+      states.handleLocalDeath();
+      return;
+    }
+
+    store.dispatch(actions.moveBlock({ type: nextType }));
     store.dispatch(actions.nextBlock());
     states.auto();
     store.dispatch(actions.lock(false));
@@ -305,8 +323,28 @@ const states = {
     }
     const localDead = state.get('playerDead');
     const remote = state.get('remote') || {};
-    const remoteDead = remote.deadInfo || {};
+    const connectedCount = remote.connectedCount || 1;
 
+    // 单人模式（未匹配对手）：自己死亡后立即结束
+    if (connectedCount < 2) {
+      if (!localDead.isDead) {
+        return;
+      }
+      const deadAt = localDead.deadAt || 0;
+      store.dispatch(actions.gameResult({
+        finished: true,
+        winner: 'local',
+        reason: 'single',
+        localPoints: state.get('points'),
+        remotePoints: 0,
+        localTime: deadAt,
+        remoteTime: 0,
+      }));
+      states.stopTimers();
+      return;
+    }
+
+    const remoteDead = remote.deadInfo || {};
     if (!localDead.isDead || !remoteDead.isDead) {
       return; // 双方都死亡后才判定
     }

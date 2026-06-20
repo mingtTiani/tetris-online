@@ -99,19 +99,21 @@ export default class Matrix extends React.Component {
       ));
 
       // 叠加落地阴影
-      const ghost = getGhost(cur, props.matrix);
-      if (ghost) {
-        ghost.shape.forEach((m, k1) => (
-          m.forEach((n, k2) => {
-            if (n && ghost.xy[0] + k1 >= 0) {
-              let line = matrix.get(ghost.xy[0] + k1);
-              if (line.get(ghost.xy[1] + k2) === 0) { // 不与当前块/已锁定块重叠
-                line = line.set(ghost.xy[1] + k2, 3);
-                matrix = matrix.set(ghost.xy[0] + k1, line);
+      if (this.props.showGhost !== false) {
+        const ghost = getGhost(cur, props.matrix);
+        if (ghost) {
+          ghost.shape.forEach((m, k1) => (
+            m.forEach((n, k2) => {
+              if (n && ghost.xy[0] + k1 >= 0) {
+                let line = matrix.get(ghost.xy[0] + k1);
+                if (line.get(ghost.xy[1] + k2) === 0) { // 不与当前块/已锁定块重叠
+                  line = line.set(ghost.xy[1] + k2, 3);
+                  matrix = matrix.set(ghost.xy[0] + k1, line);
+                }
               }
-            }
-          })
-        ));
+            })
+          ));
+        }
       }
     }
     return matrix;
@@ -198,4 +200,5 @@ Matrix.propTypes = {
   cur: propTypes.object,
   reset: propTypes.bool.isRequired,
   isRemote: propTypes.bool,
+  showGhost: propTypes.bool,
 };

@@ -26,3 +26,5 @@ export const GAME_TIME = 'GAME_TIME';
 export const PLAYER_DEAD = 'PLAYER_DEAD';
 export const OVERTIME = 'OVERTIME';
 export const GAME_RESULT = 'GAME_RESULT';
+export const SETTINGS = 'SETTINGS';
+export const RESET_SETTINGS = 'RESET_SETTINGS';

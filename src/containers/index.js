@@ -14,12 +14,24 @@ import Pause from '../components/pause';
 import Point from '../components/point';
 import Logo from '../components/logo';
 import Keyboard from '../components/keyboard';
+import Settings from '../components/settings';
 
 import { transform, i18n, lan } from '../unit/const';
 import { visibilityChangeEvent, isFocus } from '../unit/';
+import store from '../store';
 import states from '../control/states';
 import actions from '../actions';
 import network from '../network';
+
+const formatKeyLabel = (name) => {
+  if (name === ' ') return 'Space';
+  if (name === 'ArrowLeft') return '←';
+  if (name === 'ArrowRight') return '→';
+  if (name === 'ArrowUp') return '↑';
+  if (name === 'ArrowDown') return '↓';
+  if (name && name.length === 1) return name.toUpperCase();
+  return name;
+};
 
 class App extends React.Component {
   constructor() {
@@ -28,6 +40,7 @@ class App extends React.Component {
       w: document.documentElement.clientWidth,
       h: document.documentElement.clientHeight,
       overtimeFlash: false,
+      settingsVisible: false,
     };
   }
   componentWillMount() {
@@ -58,12 +71,36 @@ class App extends React.Component {
         this.setState({ overtimeFlash: false });
       }, 2000);
     }
+
+    // 游戏模式切换：连入/断开对战服务器
+    const prevMode = this.props.settings.gameMode;
+    const nextMode = nextProps.settings.gameMode;
+    if (prevMode !== nextMode) {
+      if (nextMode === 'dual') {
+        network.init(store);
+      } else {
+        network.disconnect();
+      }
+      states.resetToMenu();
+    }
   }
   resize() {
     this.setState({
       w: document.documentElement.clientWidth,
       h: document.documentElement.clientHeight,
     });
+  }
+  openSettings() {
+    this.setState({ settingsVisible: true });
+  }
+  closeSettings() {
+    this.setState({ settingsVisible: false });
+  }
+  handleSettingsChange(data) {
+    this.props.dispatch(actions.settings(data));
+  }
+  handleSettingsReset() {
+    this.props.dispatch(actions.resetSettings());
   }
   selectStartLevel(level) {
     this.props.dispatch(actions.speedStart(level));
@@ -132,7 +169,15 @@ class App extends React.Component {
       return null;
     }
     const winnerText = result.winner === 'local' ? '你赢了' : '对方赢了';
-    const reasonText = result.reason === 'points' ? '分数更高' : '存活更久';
+    const reasonText = (() => {
+      if (result.reason === 'points') {
+        return '分数更高';
+      }
+      if (result.reason === 'single') {
+        return '单人挑战结束';
+      }
+      return '存活更久';
+    })();
     return (
       <div className={style.resultOverlay}>
         <div className={style.resultBox}>
@@ -172,7 +217,11 @@ class App extends React.Component {
     const pauseData = isRemote ? data.pause : this.props.pause;
 
     return (
-      <div className={style.panel}>
+      <div
+        className={classnames(style.panel, {
+          [style.singlePanel]: this.props.settings.gameMode === 'single',
+        })}
+      >
         <div className={style.panelLabel}>{isRemote ? '对方' : '我方'}</div>
         {this.renderBattleOverlay(isRemote, data)}
         <Matrix
@@ -180,6 +229,7 @@ class App extends React.Component {
           cur={cur}
           reset={reset}
           isRemote={isRemote}
+          showGhost={this.props.settings.showGhost}
         />
         <Logo cur={!!cur} reset={reset} />
         <div className={style.state}>
@@ -231,6 +281,80 @@ class App extends React.Component {
     }
     return null;
   }
+  renderRoomInfo() {
+    const { settings, remote, cur } = this.props;
+    if (settings.gameMode !== 'dual') {
+      return null;
+    }
+    const connectedCount = remote.connectedCount || 1;
+    const connectionStatus = remote.connectionStatus || 'disconnected';
+    const isWaiting = connectedCount < 2;
+    const inGame = !!cur;
+
+    const statusText = (() => {
+      if (connectionStatus === 'connecting') {
+        return '正在连接对战服务器…';
+      }
+      if (connectionStatus === 'error' || connectionStatus === 'disconnected') {
+        return '未连接服务器（请先运行 npm run server）';
+      }
+      return isWaiting ? '等待对手' : '双方已连接，按 R 开始对战';
+    })();
+
+    return (
+      <div className={style.roomInfo}>
+        <div className={style.roomHeader}>
+          <span>房间: {network.getRoomId()} </span>
+          <span className={isWaiting ? style.waiting : style.connected}>
+            {statusText}
+          </span>
+        </div>
+        {!inGame && this.renderStartLevelSelector()}
+        {isWaiting && connectionStatus === 'connected' && (
+          <p className={style.roomTip}>
+            把地址栏链接发给好友，进入同一房间即可开始对战；死亡后由分数与存活时间决胜负
+          </p>
+        )}
+        {(connectionStatus === 'error' || connectionStatus === 'disconnected') && (
+          <p className={style.roomTip}>
+            请确认已执行 npm run server，并检查防火墙是否放行 WebSocket 端口
+          </p>
+        )}
+      </div>
+    );
+  }
+  renderSingleInfo() {
+    const { settings, cur } = this.props;
+    if (settings.gameMode !== 'single' || cur) {
+      return null;
+    }
+    return (
+      <div className={style.roomInfo}>
+        <div className={style.roomHeader}>
+          <span className={style.connected}>单人模式</span>
+        </div>
+        {this.renderStartLevelSelector()}
+      </div>
+    );
+  }
+  renderRemotePanel() {
+    const { settings, remote } = this.props;
+    if (settings.gameMode !== 'dual') {
+      return null;
+    }
+    const connectedCount = remote.connectedCount || 1;
+    const isWaiting = connectedCount < 2;
+    if (isWaiting) {
+      return (
+        <div className={style.waitingPanel}>
+          <div className={style.waitingTitle}>等待对手加入…</div>
+          <div className={style.roomUrl}>{window.location.href}</div>
+          <p className={style.waitingHint}>复制上方链接到另一个浏览器或设备打开</p>
+        </div>
+      );
+    }
+    return this.renderPanel(remote, true);
+  }
   render() {
     let filling = 0;
     const size = (() => {
@@ -249,63 +373,53 @@ class App extends React.Component {
       return css;
     })();
 
-    const remote = this.props.remote || {};
-    const connectedCount = remote.connectedCount || 1;
-    const connectionStatus = remote.connectionStatus || 'disconnected';
-    const isWaiting = connectedCount < 2;
+    const { settings, keyboard } = this.props;
     const inGame = !!this.props.cur;
-
-    const statusText = (() => {
-      if (connectionStatus === 'connecting') {
-        return '正在连接对战服务器…';
-      }
-      if (connectionStatus === 'error' || connectionStatus === 'disconnected') {
-        return '未连接服务器（请先运行 npm run server）';
-      }
-      return isWaiting ? '等待对手' : '双方已连接，按 R 开始对战';
-    })();
+    const keyLabels = {};
+    Object.keys(settings.keys).forEach((action) => {
+      keyLabels[action] = formatKeyLabel(settings.keys[action]);
+    });
 
     return (
       <div
         className={style.app}
         style={size}
       >
-        <div className={style.roomInfo}>
-          <div className={style.roomHeader}>
-            <span>房间: {network.getRoomId()} </span>
-            <span className={isWaiting ? style.waiting : style.connected}>
-              {statusText}
-            </span>
-          </div>
-          {!inGame && this.renderStartLevelSelector()}
-          {isWaiting && connectionStatus === 'connected' && (
-            <p className={style.roomTip}>
-              把地址栏链接发给好友，进入同一房间即可开始对战；死亡后由分数与存活时间决胜负
-            </p>
-          )}
-          {(connectionStatus === 'error' || connectionStatus === 'disconnected') && (
-            <p className={style.roomTip}>
-              请确认已执行 npm run server，并检查防火墙是否放行 WebSocket 端口
-            </p>
-          )}
-        </div>
+        {!inGame && (
+          <button className={style.settingsBtn} onClick={() => this.openSettings()}>
+            ⚙️
+          </button>
+        )}
+        {this.renderRoomInfo()}
+        {this.renderSingleInfo()}
         {this.renderOvertimeFlash()}
         <div className={classnames({ [style.rect]: true, [style.drop]: this.props.drop })}>
           <Decorate />
-          <div className={style.screen}>
+          <div
+            className={classnames(style.screen, {
+              [style.singleScreen]: settings.gameMode === 'single',
+            })}
+          >
             {this.renderScoreboard()}
             {this.renderPanel({}, false)}
-            {isWaiting ? (
-              <div className={style.waitingPanel}>
-                <div className={style.waitingTitle}>等待对手加入…</div>
-                <div className={style.roomUrl}>{window.location.href}</div>
-                <p className={style.waitingHint}>复制上方链接到另一个浏览器或设备打开</p>
-              </div>
-            ) : this.renderPanel(remote, true)}
+            {this.renderRemotePanel()}
           </div>
         </div>
         {this.renderResultOverlay()}
-        <Keyboard filling={filling} keyboard={this.props.keyboard} />
+        <Keyboard filling={filling} keyboard={keyboard} keyLabels={keyLabels} />
+        <Settings
+          visible={this.state.settingsVisible}
+          settings={settings}
+          speedStart={this.props.speedStart}
+          startLines={this.props.startLines}
+          music={this.props.music}
+          onChange={(data) => this.handleSettingsChange(data)}
+          onSpeedStartChange={(level) => this.selectStartLevel(level)}
+          onStartLinesChange={(lines) => this.props.dispatch(actions.startLines(lines))}
+          onMusicToggle={() => this.props.dispatch(actions.music(!this.props.music))}
+          onReset={() => this.handleSettingsReset()}
+          onClose={() => this.closeSettings()}
+        />
       </div>
     );
   }
@@ -331,6 +445,7 @@ App.propTypes = {
   gameTime: propTypes.number.isRequired,
   playerDead: propTypes.object.isRequired,
   gameResult: propTypes.object.isRequired,
+  settings: propTypes.object.isRequired,
 };
 
 const mapStateToProps = (state) => ({
@@ -352,6 +467,7 @@ const mapStateToProps = (state) => ({
   gameTime: state.get('gameTime'),
   playerDead: state.get('playerDead'),
   gameResult: state.get('gameResult'),
+  settings: state.get('settings'),
 });
 
 export default connect(mapStateToProps)(App);

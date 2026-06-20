@@ -31,7 +31,12 @@ const music = {};
       const getSource = () => { // 创建source源。
         const source = context.createBufferSource();
         source.buffer = buf;
-        source.connect(context.destination);
+        const gainNode = context.createGain();
+        const settings = store.getState().get('settings');
+        const volume = settings && typeof settings.volume === 'number' ? settings.volume : 1;
+        gainNode.gain.value = volume;
+        source.connect(gainNode);
+        gainNode.connect(context.destination);
         return source;
       };
 

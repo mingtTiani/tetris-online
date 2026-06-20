@@ -103,7 +103,11 @@ const getParam = (param) => { // 获取浏览器参数
 };
 
 const lan = (() => {
+  const savedLanguage = lastRecord && lastRecord.settings && lastRecord.settings.language;
   let l = getParam('lan').toLowerCase();
+  if (!l && savedLanguage) {
+    l = savedLanguage.toLowerCase();
+  }
   l = i18n.lan.indexOf(l) === -1 ? i18n.default : l;
   return l;
 })();
