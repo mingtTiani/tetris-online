@@ -23,7 +23,9 @@ import states from '../control/states';
 import actions from '../actions';
 import network from '../network';
 
-const formatKeyLabel = (name) => {
+const formatKeyLabel = (names) => {
+  // 虚拟键盘空间有限，多键时只展示主键(第一个)
+  const name = Array.isArray(names) ? names[0] : names;
   if (name === ' ') return 'Space';
   if (name === 'ArrowLeft') return '←';
   if (name === 'ArrowRight') return '→';
@@ -406,7 +408,7 @@ class App extends React.Component {
           </div>
         </div>
         {this.renderResultOverlay()}
-        <Keyboard filling={filling} keyboard={keyboard} keyLabels={keyLabels} />
+        <Keyboard filling={filling} keyboard={keyboard} keyLabels={keyLabels} inGame={inGame} />
         <Settings
           visible={this.state.settingsVisible}
           settings={settings}

@@ -13,7 +13,8 @@ export default {
   rotate,
   right,
   space,
-  r,
-  p,
-  s,
+  // 动作名需与 settings.keys 中的键一致，否则物理键盘 todo[action] 会取不到
+  reset: r,
+  pause: p,
+  music: s,
 };

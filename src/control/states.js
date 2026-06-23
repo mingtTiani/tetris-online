@@ -404,6 +404,15 @@ const states = {
     store.dispatch(actions.pause(false));
   },
 
+  // 放弃当前对局，回到开始(选难度)界面，可重新调整初始速度/行数
+  backToMenu: () => {
+    states.resetToMenu();
+    store.dispatch(actions.matrix(blankMatrix));
+    store.dispatch(actions.moveBlock({ reset: true })); // cur = null，显示初始速度/行数选择
+    store.dispatch(actions.clearLines(0));
+    store.dispatch(actions.lock(false));
+  },
+
   // 游戏结束动画完成
   overEnd: () => {
     store.dispatch(actions.matrix(blankMatrix));

@@ -71,14 +71,19 @@ export default class Keyboard extends React.Component {
       }
     }, true);
   }
-  shouldComponentUpdate({ keyboard, filling, keyLabels }) {
+  shouldComponentUpdate({ keyboard, filling, keyLabels, inGame }) {
     return !Immutable.is(keyboard, this.props.keyboard) ||
       filling !== this.props.filling ||
+      inGame !== this.props.inGame ||
       JSON.stringify(keyLabels) !== JSON.stringify(this.props.keyLabels);
   }
   render() {
     const keyboard = this.props.keyboard;
     const labels = this.props.keyLabels || {};
+    const inGame = this.props.inGame;
+    const resetLabel = inGame
+      ? `${i18n.reset[lan]}(⇧${labels.reset || 'R'})`
+      : `${i18n.reset[lan]}(${labels.reset || 'R'})`;
     return (
       <div
         className={style.keyboard}
@@ -141,9 +146,9 @@ export default class Keyboard extends React.Component {
           size="s2"
           top={0}
           left={196}
-          label={`${i18n.reset[lan]}(${labels.reset || 'R'})`}
+          label={resetLabel}
           active={keyboard.get('reset')}
-          {...this.handlers.r}
+          {...this.handlers.reset}
         />
         <Button
           color="green"
@@ -152,7 +157,7 @@ export default class Keyboard extends React.Component {
           left={106}
           label={`${i18n.sound[lan]}(${labels.music || 'M'})`}
           active={keyboard.get('music')}
-          {...this.handlers.s}
+          {...this.handlers.music}
         />
         <Button
           color="green"
@@ -161,7 +166,7 @@ export default class Keyboard extends React.Component {
           left={16}
           label={`${i18n.pause[lan]}(${labels.pause || 'P'})`}
           active={keyboard.get('pause')}
-          {...this.handlers.p}
+          {...this.handlers.pause}
         />
       </div>
     );
@@ -172,4 +177,5 @@ Keyboard.propTypes = {
   filling: propTypes.number.isRequired,
   keyboard: propTypes.object.isRequired,
   keyLabels: propTypes.object,
+  inGame: propTypes.bool,
 };

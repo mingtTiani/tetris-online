@@ -17,7 +17,7 @@ const keyActionNames = {
   reset: i18n.reset[lan],
 };
 
-const formatKey = (name) => {
+const formatOneKey = (name) => {
   if (name === ' ') return 'Space';
   if (name === 'ArrowLeft') return '←';
   if (name === 'ArrowRight') return '→';
@@ -25,6 +25,11 @@ const formatKey = (name) => {
   if (name === 'ArrowDown') return '↓';
   if (name && name.length === 1) return name.toUpperCase();
   return name;
+};
+
+const formatKey = (names) => {
+  const arr = Array.isArray(names) ? names : [names];
+  return arr.map(formatOneKey).join(' / ');
 };
 
 export default class Settings extends React.Component {
@@ -54,7 +59,7 @@ export default class Settings extends React.Component {
     }
     const { settings, onChange } = this.props;
     onChange({
-      keys: Object.assign({}, settings.keys, { [listening]: e.key }),
+      keys: Object.assign({}, settings.keys, { [listening]: [e.key] }),
     });
     this.setState({ listening: null });
   }

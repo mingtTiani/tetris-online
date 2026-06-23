@@ -7,16 +7,35 @@ export const defaultSettings = {
   showGhost: true,
   volume: 1,
   language: '', // empty means follow browser/i18n default
+  // 每个动作支持绑定多个键：方向键与 wasd 都可用于游戏内操作，
+  // 未开始时同样用于调节初始速度(左右)与初始行数(上下)
   keys: {
-    left: 'a',
-    right: 'd',
-    down: 's',
-    rotate: 'j',
-    space: ' ',
-    pause: 'p',
-    music: 'm',
-    reset: 'r',
+    left: ['a', 'ArrowLeft'],
+    right: ['d', 'ArrowRight'],
+    down: ['s', 'ArrowDown'],
+    rotate: ['j', 'w', 'ArrowUp'],
+    space: [' '],
+    pause: ['p'],
+    music: ['m'],
+    reset: ['r'],
   },
+};
+
+// 把按键配置规范化为数组形式，兼容旧版“单键字符串”存档
+const normalizeKeys = (saved) => {
+  const result = {};
+  Object.keys(defaultSettings.keys).forEach((action) => {
+    const value = saved && saved[action];
+    if (Array.isArray(value)) {
+      const list = value.filter((k) => typeof k === 'string' && k.length > 0);
+      result[action] = list.length > 0 ? list : defaultSettings.keys[action].slice();
+    } else if (typeof value === 'string' && value.length > 0) {
+      result[action] = [value];
+    } else {
+      result[action] = defaultSettings.keys[action].slice();
+    }
+  });
+  return result;
 };
 
 const mergeSettings = (saved) => {
@@ -29,7 +48,7 @@ const mergeSettings = (saved) => {
     showGhost: typeof saved.showGhost === 'boolean' ? saved.showGhost : defaultSettings.showGhost,
     volume: typeof saved.volume === 'number' ? saved.volume : defaultSettings.volume,
     language: typeof saved.language === 'string' ? saved.language : defaultSettings.language,
-    keys: Object.assign({}, defaultSettings.keys, saved.keys || {}),
+    keys: normalizeKeys(saved.keys),
   };
 };
 

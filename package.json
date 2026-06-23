@@ -5,6 +5,7 @@
   "scripts": {
     "start": "webpack-dev-server --progress",
     "server": "node server/websocket.js",
+    "dev": "trap 'kill 0' EXIT INT TERM; node server/websocket.js & npm start",
     "build": "rm -rf ./docs/* && webpack --config ./webpack.production.config.js --progress && ls ./docs"
   },
   "repository": {

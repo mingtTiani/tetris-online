@@ -30,10 +30,13 @@ const getKeyMap = () => {
   const keys = settings ? settings.keys : {};
   const map = {};
   Object.keys(keys).forEach((action) => {
-    const code = keyNameToCode(keys[action]);
-    if (code !== null) {
-      map[code] = action;
-    }
+    const names = Array.isArray(keys[action]) ? keys[action] : [keys[action]];
+    names.forEach((name) => {
+      const code = keyNameToCode(name);
+      if (code !== null) {
+        map[code] = action;
+      }
+    });
   });
   return map;
 };
@@ -54,7 +57,7 @@ const keyDown = (e) => {
     return;
   }
   keydownActive = type;
-  todo[type].down(store);
+  todo[type].down(store, { shift: e.shiftKey === true });
 };
 
 const keyUp = (e) => {
